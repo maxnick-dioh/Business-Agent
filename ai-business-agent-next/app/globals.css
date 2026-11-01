@@ -503,3 +503,44 @@ h1 {
     flex-direction: column;
   }
 }
+
+.markdown-content {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin: 12px 0;
+}
+
+.markdown-content p {
+  margin: 8px 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #dce3ed;
+  padding: 10px;
+  text-align: left;
+}
+
+.markdown-content th {
+  background: #f0f4fa;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 24px;
+}
+
+.markdown-content strong {
+  font-weight: 700;
+}

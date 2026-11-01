@@ -1,54 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Home() {
   const [message, setMessage] = useState("");
-  const [reply, setReply] = useState("");
   const [messages, setMessages] = useState([]);
   const STORAGE_KEY = "agentflow_conversation_v1";
-  const [messagesLoaded, setMessagesLoaded] = useState(false);
-
-useEffect(() => {
-  try {
-    const savedMessages = localStorage.getItem(STORAGE_KEY);
-
-    if (savedMessages) {
-      const parsedMessages = JSON.parse(savedMessages);
-
-      if (
-        Array.isArray(parsedMessages) &&
-        parsedMessages.every(
-          (item) =>
-            item &&
-            ["user", "assistant"].includes(item.role) &&
-            typeof item.content === "string"
-        )
-      ) {
-        setMessages(parsedMessages);
-      }
-    }
-  } catch (error) {
-    console.error("Could not load saved conversation:", error);
-  } finally {
-    setMessagesLoaded(true);
-  }
-}, []);
-  useEffect(() => {
-  if (!messagesLoaded) return;
-
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(messages)
-    );
-  } catch (error) {
-    console.error("Could not save conversation:", error);
-    setError("Could not save the conversation in this browser.");
-  }
-}, [messages, messagesLoaded]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      try {
+        const savedMessages = localStorage.getItem(STORAGE_KEY);
+
+        if (savedMessages) {
+          const parsedMessages = JSON.parse(savedMessages);
+
+          if (
+            Array.isArray(parsedMessages) &&
+            parsedMessages.every(
+              (item) =>
+                item &&
+                ["user", "assistant"].includes(item.role) &&
+                typeof item.content === "string"
+            )
+          ) {
+            setMessages(parsedMessages);
+          }
+        }
+      } catch (error) {
+        console.error("Could not load saved conversation:", error);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  function saveMessages(nextMessages) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextMessages));
+    } catch (error) {
+      console.error("Could not save conversation:", error);
+      setError("Could not save the conversation in this browser.");
+    }
+  }
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -66,10 +64,12 @@ useEffect(() => {
       content: item.content,
     }));
 
-    setMessages((previous) => [
-      ...previous,
+    const messagesWithUser = [
+      ...messages,
       { role: "user", content: currentMessage },
-    ]);
+    ];
+    setMessages(messagesWithUser);
+    saveMessages(messagesWithUser);
 
     try {
       const response = await fetch("/api/message", {
@@ -89,14 +89,12 @@ useEffect(() => {
         throw new Error(data.error || "Something went wrong.");
       }
 
-      setMessages((previous) => [
-        ...previous,
-        {
-          role: "assistant",
-          content: data.reply,
-        },
-      ]);
-      setReply(data.reply);
+      const messagesWithReply = [
+        ...messagesWithUser,
+        { role: "assistant", content: data.reply },
+      ];
+      setMessages(messagesWithReply);
+      saveMessages(messagesWithReply);
     } catch (err) {
       setError(err.message || "Could not connect to the API.");
     } finally {
@@ -344,31 +342,17 @@ useEffect(() => {
                   className={`message ${item.role}`}
                 >
                   <strong>{item.role === "user" ? "You" : "AgentFlow"}</strong>
-                  <p>{item.content}</p>
+                  <div className="markdown-content">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {item.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               ))}
 
               {loading && <p>AgentFlow is thinking...</p>}
               {error && <p role="alert">{error}</p>}
             </div>
-
-            {reply && (
-              <div
-                style={{
-                  width: "100%",
-                  maxWidth: "600px",
-                  marginTop: "24px",
-                  padding: "16px",
-                  background: "#eaf8ef",
-                  borderRadius: "10px",
-                  textAlign: "left",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                <strong>Agent response</strong>
-                <p style={{ marginTop: "10px", marginBottom: 0 }}>{reply}</p>
-              </div>
-            )}
 
             {error && (
               <p
